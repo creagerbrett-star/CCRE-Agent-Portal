@@ -3420,12 +3420,12 @@ const AGENT_NAV=[
   {id:"dashboard", label:"Dashboard", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>, group:"Main Menu"},
   {id:"teamdash",     label:"Team Dashboard",  icon:"👑",   group:"My Business", teamLeaderOnly:true},
   {id:"roster",       label:"Agent Roster",   icon:"👥",  group:"Main Menu"},
-  {id:"vendors",      label:"Vendors",        icon:"❖",   group:"Main Menu"},
-  {id:"resources",    label:"Support",        icon:"📁",  group:"Main Menu"},
+  {id:"vendors",      label:"Vendors",        icon:"🤝",   group:"Main Menu"},
+  {id:"resources",    label:"Support",        icon:"🗂",  group:"Main Menu"},
   {id:"comms",        label:"Communications", icon:"💬",  group:"Main Menu"},
-  {id:"transactions", label:"My Deals",       icon:"⇄",   group:"My Business"},
-  {id:"training",     label:"Training",       icon:"▲",   group:"My Business"},
-  {id:"marketing",    label:"Marketing",      icon:"◈",   group:"My Business"},
+  {id:"transactions", label:"My Deals",       icon:"💼",   group:"My Business"},
+  {id:"training",     label:"Training",       icon:"🎓",   group:"My Business"},
+  {id:"marketing",    label:"Marketing",      icon:"📈",   group:"My Business"},
 ];
 
 // ─── COMPANY CALENDAR ─────────────────────────────────────────────────────────
@@ -4350,14 +4350,14 @@ function AgentPortal({agent,onLogout,onSwitchToAdmin,allAgents,courses,setCourse
 // ─── BROKER ADMIN ─────────────────────────────────────────────────────────────
 const BROKER_NAV=[
   {id:"overview",      label:"Overview",          icon:"⊞"},
-  {id:"agents",        label:"Agents",            icon:"◉"},
-  {id:"transactions",  label:"Transactions",      icon:"⇄"},
-  {id:"vendors",       label:"Vendors",           icon:"❖"},
+  {id:"agents",        label:"Agents",            icon:"👥"},
+  {id:"transactions",  label:"Transactions",      icon:"💼"},
+  {id:"vendors",       label:"Vendors",           icon:"🤝"},
   {id:"calendar",      label:"Company Calendar",  icon:"📅"},
   {id:"announcements", label:"Announcements",     icon:"📢"},
-  {id:"training",      label:"Training Manager",  icon:"▲"},
+  {id:"training",      label:"Training Manager",  icon:"🎓"},
   {id:"comms",         label:"Communications",    icon:"💬"},
-  {id:"settings",      label:"Settings",          icon:"⚙"},
+  {id:"settings",      label:"Settings",          icon:"⚙️"},
 ];
 const EF={
   name:"",email:"",password:"",title:"",phone:"",licenseNo:"",
