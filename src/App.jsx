@@ -361,9 +361,12 @@ const CSS = `
 const AVC = ["#CBA052","#1B365D","#2a7a5a","#7a3a6a","#3a5a7a","#6a5a2a"];
 const avColor = id => AVC[Math.abs(id||0)%AVC.length];
 
-const Av = ({initials,size=36,color}) => (
-  <div style={{width:size,height:size,borderRadius:"50%",background:color||G.copper,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:G.font,fontSize:size*.33,fontWeight:700,color:"#fff",flexShrink:0}}>{initials}</div>
-);
+const Av = ({initials, size=36, color}) => {
+  const isImg = initials && (initials.startsWith("data:") || initials.startsWith("http"));
+  return isImg
+    ? <img src={initials} alt="avatar" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+    : <div style={{width:size,height:size,borderRadius:"50%",background:color||G.copper,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:G.font,fontSize:size*.33,fontWeight:700,color:"#fff",flexShrink:0}}>{initials}</div>;
+};
 const CCLogo = ({inv=false,size="sm"}) => {
   // inv=true used on login screen copper panel only
   const c=inv?"#fff":G.copper, s=inv?"rgba(255,255,255,0.7)":G.muted;
@@ -4526,7 +4529,7 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
               : (plan.agentPct!=null ? `${plan.agentPct}/${plan.brokerPct}` : ef.split||"100/0");
             const updated = {
               ...ef,
-              avatar: ini,
+              avatar: (ef.avatar && (ef.avatar.startsWith("data:") || ef.avatar.startsWith("http"))) ? ef.avatar : ini,
               split: newSplit,
               soiSplit: ef.planId==="teamagent" ? toSplit(ef.soiSplit) : ef.soiSplit,
               teamLeadSplit: ef.planId==="teamagent" ? toSplit(ef.teamLeadSplit) : ef.teamLeadSplit,
@@ -4684,6 +4687,29 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                 <Card style={{padding:28}}>
                   <div style={{fontFamily:G.font,fontSize:12,fontWeight:700,color:G.navy,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:16}}>Profile</div>
                   <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                    {/* Headshot Upload */}
+<div>
+  <Lbl>Headshot Photo</Lbl>
+  <div style={{display:"flex",alignItems:"center",gap:14}}>
+    <Av initials={ef.avatar||"?"} size={56}/>
+    <label style={{cursor:"pointer",background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"9px 16px",fontFamily:G.font,fontSize:12,fontWeight:600,color:G.navy}}>
+      📷 Upload Photo
+      <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+        const file=e.target.files[0];
+        if(!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>setEF("avatar",ev.target.result);
+        reader.readAsDataURL(file);
+      }}/>
+    </label>
+    {ef.avatar && (ef.avatar.startsWith("data:") || ef.avatar.startsWith("http")) &&
+      <button onClick={()=>setEF("avatar", ef.name.trim().split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase())}
+        style={{background:"none",border:"none",fontFamily:G.font,fontSize:11,color:G.muted,cursor:"pointer",padding:0}}>
+        ✕ Remove
+      </button>
+    }
+  </div>
+</div>
                     {eInp("Full Name","name","text","e.g. Jane Smith")}
                     {eInp("Email","email","email","jane@coppercreek.com")}
                     {eInp("Password","password","password","Leave blank to keep current")}
