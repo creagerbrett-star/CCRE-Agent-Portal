@@ -4361,7 +4361,7 @@ const BROKER_NAV=[
 ];
 const EF={
   name:"",email:"",password:"",title:"",phone:"",licenseNo:"",
-  planId:"partner", isAdmin:false, anniversaryDate:"",
+  planId:"partner", isAdmin:false, anniversaryDate:"", birthday:"", mailingAddress:"", introducedBy:"", capResetDate:"", tradeName:"", paymentEntity:"",
   // Team Agent extras
   teamLeaderId:"", soiSplit:"70/30", teamLeadSplit:"60/40",
   teamLeadCapCountsAll:true,
@@ -4592,6 +4592,16 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                       {sel.planId&&<span style={{fontFamily:G.font,fontSize:10,fontWeight:700,color:G.copper,background:"#fffbeb",border:"1px solid #fde68a",padding:"2px 8px",borderRadius:10}}>{commissionPlans[sel.planId]?.label||sel.planId}</span>}
                     </div>
                     <div style={{fontFamily:G.font,fontSize:11,color:G.dim,marginTop:2}}>License: {sel.licenseNo||"—"} · Joined {sel.joined||"—"} · Split {sel.split||"—"} · Anniversary: {sel.anniversaryDate||"—"}</div>
+{(sel.birthday||sel.capResetDate||sel.tradeName||sel.paymentEntity||sel.introducedBy||sel.mailingAddress)&&(
+  <div style={{fontFamily:G.font,fontSize:11,color:G.dim,marginTop:2,display:"flex",flexWrap:"wrap",gap:"4px 16px"}}>
+    {sel.birthday&&<span>🎂 {sel.birthday}</span>}
+    {sel.capResetDate&&<span>🔄 Cap resets: {sel.capResetDate}</span>}
+    {sel.tradeName&&<span>🏷 {sel.tradeName}</span>}
+    {sel.paymentEntity&&<span>🏢 {sel.paymentEntity}</span>}
+    {sel.introducedBy&&<span>👋 Introduced by: {sel.introducedBy}</span>}
+    {sel.mailingAddress&&<span>📬 {sel.mailingAddress}</span>}
+  </div>
+)}
                     {sel.planId==="teamagent"&&sel.teamLeaderId&&<div style={{fontFamily:G.font,fontSize:11,color:G.blue,marginTop:2}}>Team Leader: {agents.find(a=>a.id===Number(sel.teamLeaderId))?.name||"—"} · SOI: {sel.soiSplit||"—"} · Team Lead: {sel.teamLeadSplit||"—"} · Cap counts: <span style={{fontWeight:700}}>{sel.teamLeadCapCountsAll!==false?"All txns":"SOI only"}</span></div>}
                   </div>
                 </div>
@@ -4717,6 +4727,12 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                     {eInp("Phone","phone","tel","(405) 555-0000")}
                     {eInp("License No.","licenseNo","text","OK-RE XXXXXXXX")}
                     {eInp("Anniversary Date","anniversaryDate","date","","plan reset date")}
+{eInp("Cap Reset Date","capResetDate","date","","when cap resets")}
+{eInp("Birthday","birthday","date","")}
+{eInp("Mailing Address","mailingAddress","text","123 Main St, OKC, OK 73101")}
+{eInp("Introduced to CCRE By","introducedBy","text","e.g. Jane Smith")}
+{eInp("Trade Name / Team Name","tradeName","text","e.g. The Smith Group")}
+{eInp("Commission Payment Entity","paymentEntity","text","e.g. Smith Realty LLC")}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:G.bg,border:`1px solid ${ef.isAdmin?G.copper:G.border}`,borderRadius:8,padding:"12px 16px"}}>
                       <div>
                         <div style={{fontFamily:G.font,fontSize:13,fontWeight:600,color:ef.isAdmin?G.copper:G.text}}>Admin Access</div>
