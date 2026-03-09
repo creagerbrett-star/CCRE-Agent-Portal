@@ -5025,6 +5025,12 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                     {inp("Phone","phone","tel","(405) 555-0000")}
                     {inp("License No.","licenseNo","text","OK-RE XXXXXXXX")}
                     {inp("Anniversary Date","anniversaryDate","date","","plan reset date")}
+                    {inp("Cap Reset Date","capResetDate","date","","when cap resets")}
+                    {inp("Birthday","birthday","date","")}
+                    {inp("Mailing Address","mailingAddress","text","123 Main St, OKC, OK 73101")}
+                    {inp("Introduced to CCRE By","introducedBy","text","e.g. Jane Smith")}
+                    {inp("Trade Name / Team Name","tradeName","text","e.g. The Smith Group")}
+                    {inp("Commission Payment Entity","paymentEntity","text","e.g. Smith Realty LLC")}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:G.bg,border:`1px solid ${form.isAdmin?G.copper:G.border}`,borderRadius:8,padding:"12px 16px"}}>
                       <div>
                         <div style={{fontFamily:G.font,fontSize:13,fontWeight:600,color:form.isAdmin?G.copper:G.text}}>Admin Access</div>
