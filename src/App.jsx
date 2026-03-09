@@ -3416,6 +3416,103 @@ function AgentResources({ broker, supportData:propSupportData=null }) {
 }
 
 // ─── AGENT PORTAL ─────────────────────────────────────────────────────────────
+function AgentMap({agents}) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
+  const [plotted, setPlotted] = useState(0);
+
+  useEffect(()=>{
+    if(mapInstanceRef.current) return;
+    // Load Leaflet CSS
+    if(!document.getElementById("leaflet-css")){
+      const link=document.createElement("link");
+      link.id="leaflet-css";
+      link.rel="stylesheet";
+      link.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      document.head.appendChild(link);
+    }
+    // Load Leaflet JS
+    const script=document.createElement("script");
+    script.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    script.onload=()=>initMap();
+    document.head.appendChild(script);
+    return ()=>{
+      if(mapInstanceRef.current){ mapInstanceRef.current.remove(); mapInstanceRef.current=null; }
+    };
+  },[]);
+
+  const initMap = async ()=>{
+    if(!mapRef.current||mapInstanceRef.current) return;
+    const L=window.L;
+    const map=L.map(mapRef.current,{zoomSnap:0.5}).setView([35.4676,-97.5164],9);
+    mapInstanceRef.current=map;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      attribution:"© OpenStreetMap contributors", maxZoom:18
+    }).addTo(map);
+    // Custom copper marker
+    const markerIcon = L.divIcon({
+      className:"",
+      html:`<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:#CBA052;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);transform:rotate(-45deg);"></div>`,
+      iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-36]
+    });
+    const agentsWithAddr=agents.filter(a=>a.mailingAddress&&a.mailingAddress.trim());
+    if(agentsWithAddr.length===0){ setStatus("done"); return; }
+    setStatus("loading");
+    let count=0;
+    for(const a of agentsWithAddr){
+      try{
+        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a.mailingAddress)}&limit=1`,{headers:{"Accept-Language":"en"}});
+        const data=await res.json();
+        if(data&&data[0]){
+          const lat=parseFloat(data[0].lat);
+          const lng=parseFloat(data[0].lon);
+          // Jitter slightly to prevent exact overlap + limit zoom precision
+          const jLat=lat+(Math.random()-0.5)*0.008;
+          const jLng=lng+(Math.random()-0.5)*0.008;
+          const marker=L.marker([jLat,jLng],{icon:markerIcon});
+          marker.bindPopup(`
+            <div style="font-family:Inter,sans-serif;min-width:160px">
+              <div style="font-weight:700;font-size:14px;color:#1B365D;margin-bottom:4px">${a.name}</div>
+              <div style="font-size:12px;color:#6B7280">${a.title||"Agent"}</div>
+              ${a.phone?`<div style="font-size:11px;color:#6B7280;margin-top:4px">📞 ${a.phone}</div>`:""}
+            </div>
+          `);
+          marker.addTo(map);
+          // Prevent zooming in closer than neighborhood level
+          marker.on("click",()=>{ if(map.getZoom()>13) map.setZoom(13); });
+          count++;
+        }
+        // Respect Nominatim rate limit
+        await new Promise(r=>setTimeout(r,1100));
+      } catch(e){ /* skip failed geocodes */ }
+      setPlotted(c=>c+1);
+    }
+    setPlotted(count);
+    setStatus("done");
+  };
+
+  const agentsWithAddr=agents.filter(a=>a.mailingAddress&&a.mailingAddress.trim());
+
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:"#6B7280"}}>
+          {status==="idle"&&"Loading map…"}
+          {status==="loading"&&`Locating agents… ${plotted} of ${agentsWithAddr.length}`}
+          {status==="done"&&(agentsWithAddr.length===0
+            ? "No agents have a mailing address set yet. Add addresses in agent profiles to see them here."
+            : `Showing ${plotted} of ${agentsWithAddr.length} agent${agentsWithAddr.length!==1?"s":""} · Addresses set in agent profiles`)}
+        </div>
+        {status==="loading"&&<div style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#CBA052",fontWeight:600}}>⏳ Geocoding addresses…</div>}
+      </div>
+      <div ref={mapRef} style={{width:"100%",height:500,borderRadius:12,overflow:"hidden",border:"1px solid #E5E7EB",boxShadow:"0 1px 4px rgba(27,54,93,0.08)"}}/>
+      <div style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#9CA3AF",marginTop:8}}>
+        📍 Markers show approximate neighborhood — exact addresses are not displayed for privacy.
+      </div>
+    </div>
+  );
+}
 const AGENT_NAV=[
   {id:"dashboard", label:"Dashboard", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>, group:"Main Menu"},
   {id:"teamdash",     label:"Team Dashboard",  icon:"👑",   group:"My Business", teamLeaderOnly:true},
@@ -3973,6 +4070,7 @@ function AgentPortal({agent,onLogout,onSwitchToAdmin,allAgents,courses,setCourse
   const [txFilter,setTxFilter]=useState("All");
   const [txDetail,setTxDetail]=useState(null);
   const [rosterSearch,setRosterSearch]=useState("");
+const [rosterTab,setRosterTab]=useState("search");
   const [showCalendar,setShowCalendar]=useState(false);
   const [lbSort,setLbSort]=useState("ucVol");
   const [mf,setMf]=useState("All");
@@ -4283,59 +4381,84 @@ const closedTx = transactions.filter(t=>t.agentId===agent.id && t.status==="Clos
           );
           return(
             <div>
+              <PH title="Agent Roster" sub={`${allAgents.length} agent${allAgents.length!==1?"s":""} at Copper Creek`}/>{!showCalendar&&tab==="roster"&&(()=>{
+          const q=rosterSearch.toLowerCase().trim();
+          const filtered=allAgents.filter(a=>
+            !q||a.name.toLowerCase().includes(q)||(a.title||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)
+          );
+          return(
+            <div>
               <PH title="Agent Roster" sub={`${allAgents.length} agent${allAgents.length!==1?"s":""} at Copper Creek`}/>
-              {/* Search */}
-              <div style={{position:"relative",maxWidth:400,marginBottom:24}}>
-                <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:14,color:G.muted,pointerEvents:"none"}}>🔍</span>
-                <input value={rosterSearch} onChange={e=>setRosterSearch(e.target.value)}
-                  placeholder="Search by name, title or email…"
-                  style={{width:"100%",background:G.surface,border:`1px solid ${G.border}`,borderRadius:10,padding:"11px 14px 11px 38px",fontFamily:G.font,fontSize:13,color:G.text,boxSizing:"border-box",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}/>
-                {rosterSearch&&<button onClick={()=>setRosterSearch("")} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:G.muted,fontSize:14,lineHeight:1}}>✕</button>}
+              {/* Sub-tab toggle */}
+              <div style={{display:"flex",gap:0,marginBottom:24,background:G.surface2,borderRadius:10,padding:4,width:"fit-content",border:`1px solid ${G.border}`}}>
+                {[["search","🔍  Agent Search"],["map","📍  Agent Map"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>setRosterTab(id)}
+                    style={{fontFamily:G.font,fontSize:12,fontWeight:700,padding:"8px 22px",borderRadius:8,border:"none",cursor:"pointer",transition:"all 0.15s",
+                      background:rosterTab===id?G.surface:"transparent",
+                      color:rosterTab===id?G.navy:G.muted,
+                      boxShadow:rosterTab===id?"0 1px 4px rgba(0,0,0,0.08)":"none"}}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              {filtered.length===0&&(
-                <div style={{textAlign:"center",padding:"48px 0"}}>
-                  <div style={{fontSize:36,marginBottom:10}}>🔍</div>
-                  <div style={{fontFamily:G.font,fontSize:14,fontWeight:600,color:G.navy,marginBottom:4}}>No agents found</div>
-                  <div style={{fontFamily:G.font,fontSize:13,color:G.muted}}>Try a different search term</div>
+
+              {/* ── AGENT SEARCH ── */}
+              {rosterTab==="search"&&(<>
+                <div style={{position:"relative",maxWidth:400,marginBottom:24}}>
+                  <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:14,color:G.muted,pointerEvents:"none"}}>🔍</span>
+                  <input value={rosterSearch} onChange={e=>setRosterSearch(e.target.value)}
+                    placeholder="Search by name, title or email…"
+                    style={{width:"100%",background:G.surface,border:`1px solid ${G.border}`,borderRadius:10,padding:"11px 14px 11px 38px",fontFamily:G.font,fontSize:13,color:G.text,boxSizing:"border-box",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}/>
+                  {rosterSearch&&<button onClick={()=>setRosterSearch("")} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:G.muted,fontSize:14,lineHeight:1}}>✕</button>}
                 </div>
-              )}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
-                {filtered.map(a=>{
-                  const closed=transactions.filter(t=>t.agentId===a.id&&t.status==="Closed");
-                  const vol=closed.reduce((s,t)=>s+t.salePrice,0);
-                  const isMe=a.id===agent.id;
-                  return(
-                    <div key={a.id} style={{background:G.surface,border:`2px solid ${isMe?G.copper:G.border}`,borderRadius:12,padding:"22px 24px",boxShadow:"0 1px 4px rgba(27,54,93,0.06)",transition:"all 0.18s"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-                        <div style={{position:"relative",flexShrink:0}}>
-                          <Av initials={a.avatar||"?"} size={48}/>
-                          {isMe&&<div style={{position:"absolute",bottom:-2,right:-2,background:G.copper,borderRadius:"50%",width:14,height:14,border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>✓</div>}
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                            <div style={{fontFamily:G.font,fontSize:14,fontWeight:700,color:G.navy,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.name}</div>
-                            {isMe&&<span style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.copper,background:"#fffbeb",padding:"1px 6px",borderRadius:6,border:"1px solid #fde68a",flexShrink:0}}>YOU</span>}
-                            {a.isAdmin&&<span style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:"#fff",background:G.navy,padding:"1px 6px",borderRadius:6,flexShrink:0}}>ADMIN</span>}
+                {filtered.length===0&&(
+                  <div style={{textAlign:"center",padding:"48px 0"}}>
+                    <div style={{fontSize:36,marginBottom:10}}>🔍</div>
+                    <div style={{fontFamily:G.font,fontSize:14,fontWeight:600,color:G.navy,marginBottom:4}}>No agents found</div>
+                    <div style={{fontFamily:G.font,fontSize:13,color:G.muted}}>Try a different search term</div>
+                  </div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
+                  {filtered.map(a=>{
+                    const closed=transactions.filter(t=>t.agentId===a.id&&t.status==="Closed");
+                    const vol=closed.reduce((s,t)=>s+t.salePrice,0);
+                    const isMe=a.id===agent.id;
+                    return(
+                      <div key={a.id} style={{background:G.surface,border:`2px solid ${isMe?G.copper:G.border}`,borderRadius:12,padding:"22px 24px",boxShadow:"0 1px 4px rgba(27,54,93,0.06)",transition:"all 0.18s"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+                          <div style={{position:"relative",flexShrink:0}}>
+                            <Av initials={a.avatar||"?"} size={48}/>
+                            {isMe&&<div style={{position:"absolute",bottom:-2,right:-2,background:G.copper,borderRadius:"50%",width:14,height:14,border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>✓</div>}
                           </div>
-                          <div style={{fontFamily:G.font,fontSize:12,color:G.muted}}>{a.title||"Agent"}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                              <div style={{fontFamily:G.font,fontSize:14,fontWeight:700,color:G.navy,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.name}</div>
+                              {isMe&&<span style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.copper,background:"#fffbeb",padding:"1px 6px",borderRadius:6,border:"1px solid #fde68a",flexShrink:0}}>YOU</span>}
+                              {a.isAdmin&&<span style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:"#fff",background:G.navy,padding:"1px 6px",borderRadius:6,flexShrink:0}}>ADMIN</span>}
+                            </div>
+                            <div style={{fontFamily:G.font,fontSize:12,color:G.muted}}>{a.title||"Agent"}</div>
+                          </div>
                         </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,paddingTop:14,borderTop:`1px solid ${G.border}`}}>
+                          <div>
+                            <div style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>YTD Volume</div>
+                            <div style={{fontFamily:G.font,fontSize:15,fontWeight:700,color:G.navy}}>{fmt$(vol)}</div>
+                          </div>
+                          <div>
+                            <div style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Closed Deals</div>
+                            <div style={{fontFamily:G.font,fontSize:15,fontWeight:700,color:G.navy}}>{closed.length}</div>
+                          </div>
+                        </div>
+                        {a.email&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✉ {a.email}</div>}
+                        {a.phone&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:4}}>📞 {a.phone}</div>}
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,paddingTop:14,borderTop:`1px solid ${G.border}`}}>
-                        <div>
-                          <div style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>YTD Volume</div>
-                          <div style={{fontFamily:G.font,fontSize:15,fontWeight:700,color:G.navy}}>{fmt$(vol)}</div>
-                        </div>
-                        <div>
-                          <div style={{fontFamily:G.font,fontSize:9,fontWeight:700,color:G.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Closed Deals</div>
-                          <div style={{fontFamily:G.font,fontSize:15,fontWeight:700,color:G.navy}}>{closed.length}</div>
-                        </div>
-                      </div>
-                      {a.email&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✉ {a.email}</div>}
-                      {a.phone&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:4}}>📞 {a.phone}</div>}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>)}
+
+              {/* ── AGENT MAP ── */}
+              {rosterTab==="map"&&<AgentMap agents={allAgents}/>}
             </div>
           );
         })()}
