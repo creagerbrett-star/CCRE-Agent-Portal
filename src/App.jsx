@@ -4374,21 +4374,14 @@ const closedTx = transactions.filter(t=>t.agentId===agent.id && t.status==="Clos
           </div>
         )}
         {!showCalendar&&tab==="transactions"&&<AgentTransactions agentId={agent.id} agent={agent} transactions={transactions} initialFilter={txFilter} initialDetail={txDetail}/>}
-        {!showCalendar&&tab==="roster"&&(()=>{
-          const q=rosterSearch.toLowerCase().trim();
-          const filtered=allAgents.filter(a=>
-            !q||a.name.toLowerCase().includes(q)||(a.title||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)
-          );
-          return(
-            <div>
-              <PH title="Agent Roster" sub={`${allAgents.length} agent${allAgents.length!==1?"s":""} at Copper Creek`}/>{!showCalendar&&tab==="roster"&&(()=>{
-          const q=rosterSearch.toLowerCase().trim();
-          const filtered=allAgents.filter(a=>
-            !q||a.name.toLowerCase().includes(q)||(a.title||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)
-          );
-          return(
-            <div>
-              <PH title="Agent Roster" sub={`${allAgents.length} agent${allAgents.length!==1?"s":""} at Copper Creek`}/>
+          {!showCalendar&&tab==="roster"&&(()=>{
+                const q=rosterSearch.toLowerCase().trim();
+                const filtered=allAgents.filter(a=>
+                              !q||a.name.toLowerCase().includes(q)||(a.title||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)
+                            );
+                return(
+                              <div>
+                              <PH title="Agent Roster" sub={`${allAgents.length} agent${allAgents.length!==1?"s":""} at Copper Creek`}/>
               {/* Sub-tab toggle */}
               <div style={{display:"flex",gap:0,marginBottom:24,background:G.surface2,borderRadius:10,padding:4,width:"fit-content",border:`1px solid ${G.border}`}}>
                 {[["search","🔍  Agent Search"],["map","📍  Agent Map"]].map(([id,label])=>(
