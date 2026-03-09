@@ -3449,6 +3449,8 @@ function AgentMap({ agents }) {
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        minZoom: 5,
+        maxZoom: 13,
         styles: [
           { featureType: "poi", stylers: [{ visibility: "off" }] },
           { featureType: "transit", stylers: [{ visibility: "off" }] },
@@ -3460,37 +3462,60 @@ function AgentMap({ agents }) {
       const infoWindow = new window.google.maps.InfoWindow();
       let count = 0;
 
-      const geocodeNext = (i) => {
+      const makeHeadshotIcon = (photoUrl) => new Promise((resolve) => {
+        const size = 44;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+          ctx.fillStyle = '#CBA052';
+          ctx.fill();
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2 - 3, 0, Math.PI*2);
+          ctx.clip();
+          ctx.drawImage(img, 3, 3, size-6, size-6);
+          ctx.restore();
+          resolve({ url: canvas.toDataURL(), scaledSize: new window.google.maps.Size(size, size), anchor: new window.google.maps.Point(size/2, size/2) });
+        };
+        img.onerror = () => {
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+          ctx.fillStyle = '#CBA052';
+          ctx.fill();
+          ctx.strokeStyle = '#7a5f28';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          resolve({ url: canvas.toDataURL(), scaledSize: new window.google.maps.Size(size, size), anchor: new window.google.maps.Point(size/2, size/2) });
+        };
+        img.src = photoUrl;
+      });
+
+      const geocodeNext = async (i) => {
         if (i >= withAddr.length) {
           setStatus("Showing " + count + " of " + agents.length + " agents" + (count < agents.length ? " · " + (agents.length - count) + " without address" : ""));
           return;
         }
         const agent = withAddr[i];
         setStatus("Locating agents... " + (i + 1) + " of " + withAddr.length);
-        geocoder.geocode({ address: agent.mailingAddress }, (results, gStatus) => {
+        geocoder.geocode({ address: agent.mailingAddress }, async (results, gStatus) => {
           if (gStatus === "OK" && results[0]) {
             const lat = results[0].geometry.location.lat() + (Math.random() - 0.5) * 0.008;
             const lng = results[0].geometry.location.lng() + (Math.random() - 0.5) * 0.008;
-            const marker = new window.google.maps.Marker({
-              position: { lat, lng },
-              map,
-              title: agent.name,
-              icon: {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: "#CBA052",
-                fillOpacity: 1,
-                strokeColor: "#7a5f28",
-                strokeWeight: 2,
-              },
-            });
+            let icon;
+            if (agent.avatar && (agent.avatar.startsWith('data:') || agent.avatar.startsWith('http'))) {
+              icon = await makeHeadshotIcon(agent.avatar);
+            } else {
+              icon = { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#CBA052", fillOpacity: 1, strokeColor: "#7a5f28", strokeWeight: 2 };
+            }
+            const marker = new window.google.maps.Marker({ position: { lat, lng }, map, title: agent.name, icon });
             marker.addListener("click", () => {
-              infoWindow.setContent(
-                '<div style="font-family:Inter,sans-serif;padding:4px 6px">' +
-                '<strong style="color:#111827">' + agent.name + '</strong><br/>' +
-                '<span style="color:#6B7280;font-size:13px">' + (agent.title || "") + '</span>' +
-                '</div>'
-              );
+              infoWindow.setContent('<div style="font-family:Inter,sans-serif;padding:4px 6px"><strong style="color:#111827">' + agent.name + '</strong><br/><span style="color:#6B7280;font-size:13px">' + (agent.title || "") + '</span></div>');
               infoWindow.open(map, marker);
             });
             markersRef.current.push(marker);
@@ -3506,7 +3531,7 @@ function AgentMap({ agents }) {
       markersRef.current.forEach(m => m.setMap(null));
       markersRef.current = [];
     };
-  }, [agents.map(a => a.id + (a.mailingAddress || "")).join(",")]);
+  }, [agents.map(a => a.id + (a.mailingAddress || "") + (a.avatar || "")).join(",")]);
 
   return (
     <div>
@@ -3514,9 +3539,7 @@ function AgentMap({ agents }) {
         <span style={{fontSize:13,color:"#6B7280"}}>{status}</span>
       </div>
       <div ref={mapRef} style={{width:"100%",height:480,borderRadius:12,border:"1px solid #E5E7EB",overflow:"hidden"}}/>
-      <p style={{fontSize:12,color:"#9CA3AF",marginTop:6}}>
-        📍 Markers show approximate neighborhood — exact addresses are not displayed for privacy.
-      </p>
+      <p style={{fontSize:12,color:"#9CA3AF",marginTop:6}}>📍 Markers show approximate neighborhood — exact addresses are not displayed for privacy.</p>
     </div>
   );
 }
