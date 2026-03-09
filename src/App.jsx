@@ -4452,16 +4452,16 @@ const closedTx = transactions.filter(t=>t.agentId===agent.id && t.status==="Clos
                         {a.email&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✉ {a.email}</div>}
                         {a.phone&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:4}}>📞 {a.phone}</div>}
                       </div>
-                    );
-                  })}
+              );
+            })}
+          </div>
+        </>)}
 
-                
-
-              {/* ── AGENT MAP ── */}
-              {rosterTab==="map"&&<AgentMap agents={allAgents}/>}
-            </div>
-          );
-        })()}
+        {/* ── AGENT MAP ── */}
+        {rosterTab==="map"&&<AgentMap agents={allAgents}/>}
+      </div>
+    );
+  })()}
         {!showCalendar&&tab==="vendors"&&<Vendors isAdmin={false}/>}
         {!showCalendar&&tab==="resources"&&<AgentResources broker={BROKER} supportData={supportData}/>}
         {!showCalendar&&tab==="marketing"&&(<div style={{padding:"36px 44px"}}><PH title="Marketing Hub" sub="Brand-Approved Materials"/><div style={{marginBottom:22}}><SegTabs tabs={["All","Listing","Social","Print","Email"].map(f=>({id:f,label:f}))} active={mf} setActive={setMf}/></div><div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>{MARKETING.filter(m=>mf==="All"||m.category===mf).map(m=><Card key={m.id} style={{padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:14}}><div style={{fontSize:28}}>{m.thumb}</div><div><div style={{fontFamily:G.font,fontSize:13,fontWeight:600,color:G.navy}}>{m.title}</div><div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:2}}>{m.category} · {m.format} · Updated {m.updated}</div></div></div><button className="abtn" style={{fontFamily:G.font,fontSize:11,fontWeight:600,padding:"8px 16px",borderRadius:6,border:`1px solid ${G.border}`,background:"transparent",color:G.navy,cursor:"pointer",whiteSpace:"nowrap"}}>Download</button></Card>)}</div></div>)}
