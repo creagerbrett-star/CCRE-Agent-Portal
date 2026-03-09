@@ -3515,7 +3515,34 @@ function AgentMap({ agents }) {
             }
             const marker = new window.google.maps.Marker({ position: { lat, lng }, map, title: agent.name, icon });
             marker.addListener("click", () => {
-              infoWindow.setContent('<div style="font-family:Inter,sans-serif;padding:4px 6px"><strong style="color:#111827">' + agent.name + '</strong><br/><span style="color:#6B7280;font-size:13px">' + (agent.title || "") + '</span></div>');
+              const av = agent.avatar && (agent.avatar.startsWith('data:') || agent.avatar.startsWith('http'))
+                ? '<img src="' + agent.avatar + '" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #CBA052;flex-shrink:0"/>'
+                : '<div style="width:56px;height:56px;border-radius:50%;background:#CBA052;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0">' + (agent.name||"").split(" ").map(w=>w[0]).join("").substring(0,2) + '</div>';
+              const vol = (agent.transactions||[]).filter(t=>t.status==="Closed").reduce((s,t)=>s+(t.salePrice||0),0);
+              const deals = (agent.transactions||[]).filter(t=>t.status==="Closed").length;
+              infoWindow.setContent(
+                '<div style="font-family:Inter,sans-serif;padding:12px;min-width:240px;max-width:280px">' +
+                  '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">' +
+                    av +
+                    '<div>' +
+                      '<div style="font-weight:700;font-size:15px;color:#111827">' + agent.name + '</div>' +
+                      '<div style="font-size:13px;color:#6B7280">' + (agent.title||"") + '</div>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
+                    '<div style="background:#F9FAFB;border-radius:8px;padding:8px">' +
+                      '<div style="font-size:10px;font-weight:600;color:#6B7280;letter-spacing:.05em;text-transform:uppercase">YTD Volume</div>' +
+                      '<div style="font-size:15px;font-weight:700;color:#CBA052">$' + vol.toLocaleString() + '</div>' +
+                    '</div>' +
+                    '<div style="background:#F9FAFB;border-radius:8px;padding:8px">' +
+                      '<div style="font-size:10px;font-weight:600;color:#6B7280;letter-spacing:.05em;text-transform:uppercase">Closed Deals</div>' +
+                      '<div style="font-size:15px;font-weight:700;color:#111827">' + deals + '</div>' +
+                    '</div>' +
+                  '</div>' +
+                  (agent.email ? '<div style="font-size:12px;color:#6B7280;margin-bottom:3px">✉ ' + agent.email + '</div>' : '') +
+                  (agent.phone ? '<div style="font-size:12px;color:#6B7280">📞 ' + agent.phone + '</div>' : '') +
+                '</div>'
+              );
               infoWindow.open(map, marker);
             });
             markersRef.current.push(marker);
