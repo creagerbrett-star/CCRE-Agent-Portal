@@ -3433,7 +3433,7 @@ function AgentMap({ agents }) {
     const loadGoogleMaps = () => new Promise((resolve) => {
       if (window.google && window.google.maps) { resolve(); return; }
       const script = document.createElement('script');
-      script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyC2BzceETu3Q8Erh6ul2fTIShnEzLSFNx0";
+      script.src = "https://maps.googleapis.com/maps/api/js?key=" + import.meta.env.VITE_GOOGLE_MAPS_KEY;
       script.async = true;
       script.onload = resolve;
       document.head.appendChild(script);
