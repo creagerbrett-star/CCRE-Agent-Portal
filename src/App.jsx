@@ -33,7 +33,7 @@ const COMMISSION_PLANS_SEED = {
     processingFee:150, postCapFee:300,
     commCap:5000, txFeeCap:null,   // commCap = broker's share cap
     officeDues:65,
-    description:"80/20 split · $5k commission cap · cap resets on anniversary",
+    description:"80/20 split · $5k commission cap · cap resets on cap reset date",
   },
   entrepreneur: {
     id:"entrepreneur", label:"Entrepreneur Plan",
@@ -41,7 +41,7 @@ const COMMISSION_PLANS_SEED = {
     processingFee:150, postCapFee:150,
     commCap:null, txFeeCap:3900,
     officeDues:325,
-    description:"100% commission · $3,900 tx fee cap · resets on anniversary",
+    description:"100% commission · $3,900 tx fee cap · resets on cap reset date",
   },
   teamleader: {
     id:"teamleader", label:"Team Leader",
@@ -4037,7 +4037,15 @@ function AgentPortal({agent,onLogout,onSwitchToAdmin,allAgents,courses,setCourse
               const plan      = commissionPlans[agent.planId]||{};
               const commCap   = agent.annualCap  || plan.commCap  || 0;
               const feeCap    = agent.txFeeCap   || plan.txFeeCap || 0;
-              const closedTx  = transactions.filter(t=>t.agentId===agent.id && t.status==="Closed");
+              const getCapPeriodStart = (resetDateStr) => {
+  if (!resetDateStr) return null;
+  const today = new Date();
+  const reset = new Date(resetDateStr);
+  const thisYear = new Date(today.getFullYear(), reset.getMonth(), reset.getDate());
+  return thisYear <= today ? thisYear : new Date(today.getFullYear()-1, reset.getMonth(), reset.getDate());
+};
+const capPeriodStart = getCapPeriodStart(agent.capResetDate);
+const closedTx = transactions.filter(t=>t.agentId===agent.id && t.status==="Closed" && (!capPeriodStart || new Date(t.closeDate) >= capPeriodStart));
               // Commission cap (Partner Plan): broker's share paid toward cap
               const brokerPaid = closedTx.reduce((s,t)=>s+(t.brokerNet||0),0);
               // Transaction fee cap: processing fees paid per closed deal
@@ -4085,7 +4093,7 @@ function AgentPortal({agent,onLogout,onSwitchToAdmin,allAgents,courses,setCourse
                       cap={commCap}
                       color={G.copper}
                       icon="🏆"
-                      sub={`Broker's share paid · ${closedTx.length} closed deal${closedTx.length!==1?"s":""}${capHit?" · Post-cap: 100% + $300/tx":""}`}
+                      sub={`Broker's share paid · ${closedTx.length} closed deal${closedTx.length!==1?"s":""}${capHit?" · Post-cap: 100% + $300/tx":""} · Resets ${agent.capResetDate||"—"}`}
                     />}
                     {commCap>0&&feeCap>0&&<div style={{width:1,background:G.border,alignSelf:"stretch"}}/>}
                     {feeCap>0&&<CapBar
@@ -4094,7 +4102,7 @@ function AgentPortal({agent,onLogout,onSwitchToAdmin,allAgents,courses,setCourse
                       cap={feeCap}
                       color={G.navy}
                       icon="📋"
-                      sub={`Processing fees paid · ${fmt$(agent.processingFee||0)} per deal`}
+                      sub={`Processing fees paid · ${fmt$(agent.processingFee||0)} per deal · Resets ${agent.capResetDate||"—"}`}
                     />}
                   </div>
                 </Card>
@@ -4816,7 +4824,7 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                       {ef.planId==="partner"&&(
                         <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"12px 14px"}}>
                           <div style={{fontFamily:G.font,fontSize:11,fontWeight:700,color:G.amber,marginBottom:4}}>Post-Cap Behavior</div>
-                          <div style={{fontFamily:G.font,fontSize:11,color:G.sub,lineHeight:1.6}}>After cap hit: split becomes <b>100/0</b> and tx fee increases to <b>$300/transaction</b> until anniversary resets cap.</div>
+                          <div style={{fontFamily:G.font,fontSize:11,color:G.sub,lineHeight:1.6}}>After cap hit: split becomes <b>100/0</b> and tx fee increases to <b>$300/transaction</b> until cap reset date resets cap.</div>
                         </div>
                       )}
                       {ef.planId==="teamleader"&&(
@@ -4986,7 +4994,7 @@ function BrokerAdmin({onLogout,onSwitchToAgent,agentSelf,onImpersonate,agents,se
                         <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"12px 14px"}}>
                           <div style={{fontFamily:G.font,fontSize:11,fontWeight:700,color:G.amber,marginBottom:4}}>Post-Cap Behavior</div>
                           <div style={{fontFamily:G.font,fontSize:11,color:G.sub,lineHeight:1.6}}>
-                            After cap hit: split becomes <b>100/0</b> and tx fee increases to <b>$300/transaction</b> until anniversary resets cap.
+                            After cap hit: split becomes <b>100/0</b> and tx fee increases to <b>$300/transaction</b> until cap reset date resets cap.
                           </div>
                         </div>
                       )}
