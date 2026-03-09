@@ -4455,7 +4455,9 @@ const closedTx = transactions.filter(t=>t.agentId===agent.id && t.status==="Clos
                     );
                   })}
                 </div>
-              </>)}
+              </div>
+          );
+        })()}
 
               {/* ── AGENT MAP ── */}
               {rosterTab==="map"&&<AgentMap agents={allAgents}/>}
