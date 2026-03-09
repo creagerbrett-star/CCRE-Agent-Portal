@@ -3416,100 +3416,107 @@ function AgentResources({ broker, supportData:propSupportData=null }) {
 }
 
 // ─── AGENT PORTAL ─────────────────────────────────────────────────────────────
-function AgentMap({agents}) {
+function AgentMap({ agents }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | loading | done | error
-  const [plotted, setPlotted] = useState(0);
+  const markersRef = useRef([]);
+  const [status, setStatus] = useState("Loading map...");
 
-  useEffect(()=>{
-    if(mapInstanceRef.current) return;
-    // Load Leaflet CSS
-    if(!document.getElementById("leaflet-css")){
-      const link=document.createElement("link");
-      link.id="leaflet-css";
-      link.rel="stylesheet";
-      link.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
-      document.head.appendChild(link);
+  useEffect(() => {
+    const withAddr = agents.filter(a => a.mailingAddress && a.mailingAddress.trim());
+
+    if (withAddr.length === 0) {
+      setStatus("Showing 0 of " + agents.length + " agents · Addresses set in agent profiles");
+      return;
     }
-    // Load Leaflet JS
-    const script=document.createElement("script");
-    script.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
-    script.onload=()=>initMap();
-    document.head.appendChild(script);
-    return ()=>{
-      if(mapInstanceRef.current){ mapInstanceRef.current.remove(); mapInstanceRef.current=null; }
-    };
-  },[]);
 
-  const initMap = async ()=>{
-    if(!mapRef.current||mapInstanceRef.current) return;
-    const L=window.L;
-    const map=L.map(mapRef.current,{zoomSnap:0.5}).setView([35.4676,-97.5164],9);
-    mapInstanceRef.current=map;
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-      attribution:"© OpenStreetMap contributors", maxZoom:18
-    }).addTo(map);
-    // Custom copper marker
-    const markerIcon = L.divIcon({
-      className:"",
-      html:`<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:#CBA052;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);transform:rotate(-45deg);"></div>`,
-      iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-36]
+    const loadGoogleMaps = () => new Promise((resolve) => {
+      if (window.google && window.google.maps) { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyC2BzceETu3Q8Erh6ul2fTIShnEzLSFNx0";
+      script.async = true;
+      script.onload = resolve;
+      document.head.appendChild(script);
     });
-    const agentsWithAddr=agents.filter(a=>a.mailingAddress&&a.mailingAddress.trim());
-    if(agentsWithAddr.length===0){ setStatus("done"); return; }
-    setStatus("loading");
-    let count=0;
-    for(const a of agentsWithAddr){
-      try{
-        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a.mailingAddress)}&limit=1`,{headers:{"Accept-Language":"en"}});
-        const data=await res.json();
-        if(data&&data[0]){
-          const lat=parseFloat(data[0].lat);
-          const lng=parseFloat(data[0].lon);
-          // Jitter slightly to prevent exact overlap + limit zoom precision
-          const jLat=lat+(Math.random()-0.5)*0.008;
-          const jLng=lng+(Math.random()-0.5)*0.008;
-          const marker=L.marker([jLat,jLng],{icon:markerIcon});
-          marker.bindPopup(`
-            <div style="font-family:Inter,sans-serif;min-width:160px">
-              <div style="font-weight:700;font-size:14px;color:#1B365D;margin-bottom:4px">${a.name}</div>
-              <div style="font-size:12px;color:#6B7280">${a.title||"Agent"}</div>
-              ${a.phone?`<div style="font-size:11px;color:#6B7280;margin-top:4px">📞 ${a.phone}</div>`:""}
-            </div>
-          `);
-          marker.addTo(map);
-          // Prevent zooming in closer than neighborhood level
-          marker.on("click",()=>{ if(map.getZoom()>13) map.setZoom(13); });
-          count++;
+
+    loadGoogleMaps().then(() => {
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+
+      const map = new window.google.maps.Map(mapRef.current, {
+        zoom: 10,
+        center: { lat: 35.4676, lng: -97.5164 },
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        styles: [
+          { featureType: "poi", stylers: [{ visibility: "off" }] },
+          { featureType: "transit", stylers: [{ visibility: "off" }] },
+        ],
+      });
+      mapInstanceRef.current = map;
+
+      const geocoder = new window.google.maps.Geocoder();
+      const infoWindow = new window.google.maps.InfoWindow();
+      let count = 0;
+
+      const geocodeNext = (i) => {
+        if (i >= withAddr.length) {
+          setStatus("Showing " + count + " of " + agents.length + " agents" + (count < agents.length ? " · " + (agents.length - count) + " without address" : ""));
+          return;
         }
-        // Respect Nominatim rate limit
-        await new Promise(r=>setTimeout(r,1100));
-      } catch(e){ /* skip failed geocodes */ }
-      setPlotted(c=>c+1);
-    }
-    setPlotted(count);
-    setStatus("done");
-  };
+        const agent = withAddr[i];
+        setStatus("Locating agents... " + (i + 1) + " of " + withAddr.length);
+        geocoder.geocode({ address: agent.mailingAddress }, (results, gStatus) => {
+          if (gStatus === "OK" && results[0]) {
+            const lat = results[0].geometry.location.lat() + (Math.random() - 0.5) * 0.008;
+            const lng = results[0].geometry.location.lng() + (Math.random() - 0.5) * 0.008;
+            const marker = new window.google.maps.Marker({
+              position: { lat, lng },
+              map,
+              title: agent.name,
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: "#CBA052",
+                fillOpacity: 1,
+                strokeColor: "#7a5f28",
+                strokeWeight: 2,
+              },
+            });
+            marker.addListener("click", () => {
+              infoWindow.setContent(
+                '<div style="font-family:Inter,sans-serif;padding:4px 6px">' +
+                '<strong style="color:#111827">' + agent.name + '</strong><br/>' +
+                '<span style="color:#6B7280;font-size:13px">' + (agent.title || "") + '</span>' +
+                '</div>'
+              );
+              infoWindow.open(map, marker);
+            });
+            markersRef.current.push(marker);
+            count++;
+          }
+          setTimeout(() => geocodeNext(i + 1), 100);
+        });
+      };
+      geocodeNext(0);
+    });
 
-  const agentsWithAddr=agents.filter(a=>a.mailingAddress&&a.mailingAddress.trim());
+    return () => {
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+    };
+  }, [agents.map(a => a.id + (a.mailingAddress || "")).join(",")]);
 
-  return(
+  return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:"#6B7280"}}>
-          {status==="idle"&&"Loading map…"}
-          {status==="loading"&&`Locating agents… ${plotted} of ${agentsWithAddr.length}`}
-          {status==="done"&&(agentsWithAddr.length===0
-            ? "No agents have a mailing address set yet. Add addresses in agent profiles to see them here."
-            : `Showing ${plotted} of ${agentsWithAddr.length} agent${agentsWithAddr.length!==1?"s":""} · Addresses set in agent profiles`)}
-        </div>
-        {status==="loading"&&<div style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#CBA052",fontWeight:600}}>⏳ Geocoding addresses…</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontSize:13,color:"#6B7280"}}>{status}</span>
       </div>
-      <div ref={mapRef} style={{width:"100%",height:500,borderRadius:12,overflow:"hidden",border:"1px solid #E5E7EB",boxShadow:"0 1px 4px rgba(27,54,93,0.08)"}}/>
-      <div style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#9CA3AF",marginTop:8}}>
+      <div ref={mapRef} style={{width:"100%",height:480,borderRadius:12,border:"1px solid #E5E7EB",overflow:"hidden"}}/>
+      <p style={{fontSize:12,color:"#9CA3AF",marginTop:6}}>
         📍 Markers show approximate neighborhood — exact addresses are not displayed for privacy.
-      </div>
+      </p>
     </div>
   );
 }
