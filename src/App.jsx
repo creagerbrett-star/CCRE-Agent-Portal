@@ -508,7 +508,7 @@ const Sidebar = ({navItems,activeTab,setTab,userName,userTitle,userAvatar,isAdmi
   );
   return (
     <div style={{width:240,background:"#FFFFFF",borderRight:`1px solid ${G.border}`,display:"flex",flexDirection:"column",height:"100vh",flexShrink:0,position:"sticky",top:0,overflowY:"auto"}}>
-      <div style={{padding:"22px 20px 18px",borderBottom:`1px solid ${G.border}`}}><CCLogo/></div>
+      <div style={{padding:"16px 20px",borderBottom:`1px solid ${G.border}`}}><img src="/logo.png" alt="Copper Creek" style={{width:"100%",maxWidth:180,height:"auto",display:"block"}}/></div>
       <nav style={{flex:1,padding:"4px 12px",paddingTop:8,overflowY:"auto"}}>
         {groups.map((group,gi)=>(
           <div key={group.label||gi}>
