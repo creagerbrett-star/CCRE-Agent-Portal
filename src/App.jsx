@@ -1,70 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { G, statusColor } from "./constants/theme.js";
+import { COMMISSION_PLANS_SEED, DEFAULT_FEES_SEED } from "./constants/commissionPlans.js";
+import { Av, Badge, Lbl, SC, PH, Card, Tbl, Td, SegTabs, Tog } from "./components/ui/shared.jsx";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const G = {
-  bg:"#F7F8FA", surface:"#FFFFFF", surface2:"#F3F4F6", surface3:"#EAECF0",
-  copper:"#CBA052", copperDk:"#a8833d", copperLt:"#f0d898",
-  navy:"#1B365D", navyLt:"#2a4f82",
-  text:"#111827", sub:"#374151", muted:"#6B7280", dim:"#9CA3AF",
-  border:"#E5E7EB",
-  green:"#166534", greenBg:"#dcfce7",
-  amber:"#92400e", amberBg:"#fef3c7",
-  blue:"#1e40af",  blueBg:"#dbeafe",
-  red:"#b91c1c",   redBg:"#fee2e2",
-  sidebarBg:"#FFFFFF", sidebarBorder:"#E5E7EB",
-  font:"'Inter', 'Open Sans', sans-serif",
-};
 
-const statusColor = {
-  Closed:{"bg":G.greenBg,"text":G.green}, "Under Contract":{"bg":G.amberBg,"text":G.amber},
-  Active:{"bg":G.blueBg,"text":G.blue}, Paid:{"bg":G.greenBg,"text":G.green}, Pending:{"bg":G.amberBg,"text":G.amber},
-};
 
-// ─── SEED DATA ────────────────────────────────────────────────────────────────
-// ─── AGENT COMMISSION STRUCTURE ──────────────────────────────────────────────
-// split: "75/25" means agent gets 75%, brokerage gets 25%
-// commRate: default GCI % on sale price (e.g. 3.0 = 3%)
-// fees: recurring per-transaction fees charged to agent
-// ─── COMMISSION PLANS ────────────────────────────────────────────────────────
-const COMMISSION_PLANS_SEED = {
-  partner: {
-    id:"partner", label:"Partner Plan",
-    agentPct:80, brokerPct:20,
-    processingFee:150, postCapFee:300,
-    commCap:5000, txFeeCap:null,   // commCap = broker's share cap
-    officeDues:65,
-    description:"80/20 split · $5k commission cap · cap resets on cap reset date",
-  },
-  entrepreneur: {
-    id:"entrepreneur", label:"Entrepreneur Plan",
-    agentPct:100, brokerPct:0,
-    processingFee:150, postCapFee:150,
-    commCap:null, txFeeCap:3900,
-    officeDues:325,
-    description:"100% commission · $3,900 tx fee cap · resets on cap reset date",
-  },
-  teamleader: {
-    id:"teamleader", label:"Team Leader",
-    agentPct:100, brokerPct:0,
-    processingFee:150, postCapFee:150,
-    commCap:null, txFeeCap:3900,
-    officeDues:325,
-    description:"100% commission · $3,900 tx fee cap · team revenue share",
-  },
-  teamagent: {
-    id:"teamagent", label:"Team Agent",
-    agentPct:null, brokerPct:null,   // variable — set per agent
-    processingFee:300, postCapFee:300,
-    commCap:null, txFeeCap:3900,
-    officeDues:65,
-    description:"Variable split · assigned to a team leader",
-  },
-};
-
-const DEFAULT_FEES_SEED = [
-  { id:1, name:"E&O Insurance",         amount:150 },
-  { id:2, name:"Transaction Coordinator", amount:395 },
-];
 
 const INITIAL_AGENTS = [
   // ── 1. Christina Biehler — Head of Operations (Entrepreneur) ───────────────
