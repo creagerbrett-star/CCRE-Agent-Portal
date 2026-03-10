@@ -1,10 +1,70 @@
 import { useState, useRef, useEffect } from "react";
-import { G, statusColor } from "./constants/theme.js";
-import { COMMISSION_PLANS_SEED, DEFAULT_FEES_SEED } from "./constants/commissionPlans.js";
-import { Av, Badge, Lbl, SC, PH, Card, Tbl, Td, SegTabs, Tog } from "./components/ui/shared.jsx";
 
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const G = {
+  bg:"#F7F8FA", surface:"#FFFFFF", surface2:"#F3F4F6", surface3:"#EAECF0",
+  copper:"#CBA052", copperDk:"#a8833d", copperLt:"#f0d898",
+  navy:"#1B365D", navyLt:"#2a4f82",
+  text:"#111827", sub:"#374151", muted:"#6B7280", dim:"#9CA3AF",
+  border:"#E5E7EB",
+  green:"#166534", greenBg:"#dcfce7",
+  amber:"#92400e", amberBg:"#fef3c7",
+  blue:"#1e40af",  blueBg:"#dbeafe",
+  red:"#b91c1c",   redBg:"#fee2e2",
+  sidebarBg:"#FFFFFF", sidebarBorder:"#E5E7EB",
+  font:"'Inter', 'Open Sans', sans-serif",
+};
 
+const statusColor = {
+  Closed:{"bg":G.greenBg,"text":G.green}, "Under Contract":{"bg":G.amberBg,"text":G.amber},
+  Active:{"bg":G.blueBg,"text":G.blue}, Paid:{"bg":G.greenBg,"text":G.green}, Pending:{"bg":G.amberBg,"text":G.amber},
+};
 
+// ─── SEED DATA ────────────────────────────────────────────────────────────────
+// ─── AGENT COMMISSION STRUCTURE ──────────────────────────────────────────────
+// split: "75/25" means agent gets 75%, brokerage gets 25%
+// commRate: default GCI % on sale price (e.g. 3.0 = 3%)
+// fees: recurring per-transaction fees charged to agent
+// ─── COMMISSION PLANS ────────────────────────────────────────────────────────
+const COMMISSION_PLANS_SEED = {
+  partner: {
+    id:"partner", label:"Partner Plan",
+    agentPct:80, brokerPct:20,
+    processingFee:150, postCapFee:300,
+    commCap:5000, txFeeCap:null,   // commCap = broker's share cap
+    officeDues:65,
+    description:"80/20 split · $5k commission cap · cap resets on cap reset date",
+  },
+  entrepreneur: {
+    id:"entrepreneur", label:"Entrepreneur Plan",
+    agentPct:100, brokerPct:0,
+    processingFee:150, postCapFee:150,
+    commCap:null, txFeeCap:3900,
+    officeDues:325,
+    description:"100% commission · $3,900 tx fee cap · resets on cap reset date",
+  },
+  teamleader: {
+    id:"teamleader", label:"Team Leader",
+    agentPct:100, brokerPct:0,
+    processingFee:150, postCapFee:150,
+    commCap:null, txFeeCap:3900,
+    officeDues:325,
+    description:"100% commission · $3,900 tx fee cap · team revenue share",
+  },
+  teamagent: {
+    id:"teamagent", label:"Team Agent",
+    agentPct:null, brokerPct:null,   // variable — set per agent
+    processingFee:300, postCapFee:300,
+    commCap:null, txFeeCap:3900,
+    officeDues:65,
+    description:"Variable split · assigned to a team leader",
+  },
+};
+
+const DEFAULT_FEES_SEED = [
+  { id:1, name:"E&O Insurance",         amount:150 },
+  { id:2, name:"Transaction Coordinator", amount:395 },
+];
 
 const INITIAL_AGENTS = [
   // ── 1. Christina Biehler — Head of Operations (Entrepreneur) ───────────────
@@ -301,6 +361,136 @@ const CSS = `
 const AVC = ["#CBA052","#1B365D","#2a7a5a","#7a3a6a","#3a5a7a","#6a5a2a"];
 const avColor = id => AVC[Math.abs(id||0)%AVC.length];
 
+const Av = ({initials, size=36, color}) => {
+  const isImg = initials && (initials.startsWith("data:") || initials.startsWith("http"));
+  return isImg
+    ? <img src={initials} alt="avatar" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+    : <div style={{width:size,height:size,borderRadius:"50%",background:color||G.copper,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:G.font,fontSize:size*.33,fontWeight:700,color:"#fff",flexShrink:0}}>{initials}</div>;
+};
+const CCLogo = ({inv=false,size="sm"}) => {
+  // inv=true used on login screen copper panel only
+  const c=inv?"#fff":G.copper, s=inv?"rgba(255,255,255,0.7)":G.muted;
+  const fs=size==="lg"?26:14;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <svg width={size==="lg"?40:22} height={size==="lg"?40:22} viewBox="0 0 40 40" fill="none">
+        <path d="M32 10 A16 16 0 1 0 32 30" stroke={c} strokeWidth="5" strokeLinecap="round" fill="none"/>
+        <path d="M28 17 A8 8 0 1 0 28 23" stroke={c} strokeWidth="4" strokeLinecap="round" fill="none"/>
+      </svg>
+      <div>
+        <div style={{fontFamily:G.font,fontSize:fs,fontWeight:700,color:c,letterSpacing:"0.06em",lineHeight:1}}>COPPER CREEK</div>
+        <div style={{fontFamily:G.font,fontSize:fs*.42,color:s,letterSpacing:"0.1em",marginTop:2}}>Real Estate Brokers</div>
+      </div>
+    </div>
+  );
+};
+const Badge = ({status}) => <span style={{fontFamily:G.font,fontSize:10,fontWeight:600,letterSpacing:"0.06em",padding:"3px 10px",borderRadius:20,background:statusColor[status]?.bg,color:statusColor[status]?.text,display:"inline-block"}}>{status?.toUpperCase()}</span>;
+const Lbl = ({children}) => <div style={{fontFamily:G.font,fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:G.muted,marginBottom:6,textTransform:"uppercase"}}>{children}</div>;
+const SC = ({label,value,sub,accent,count}) => (
+  <div className="sc" style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:12,padding:"20px 22px",transition:"box-shadow 0.2s,transform 0.2s",position:"relative",overflow:"hidden"}}>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:accent||G.copper,borderRadius:"12px 12px 0 0"}}/>
+    <div style={{fontFamily:G.font,fontSize:11,fontWeight:500,color:G.muted,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:10}}>{label}</div>
+    <div style={{fontFamily:G.font,fontSize:26,fontWeight:700,color:G.text,lineHeight:1.1,display:"flex",alignItems:"baseline",gap:6}}>
+      {value}{count!=null&&<span style={{fontSize:15,fontWeight:600,color:G.muted}}>({count})</span>}
+    </div>
+    {sub&&<div style={{fontFamily:G.font,fontSize:11,color:G.muted,marginTop:6,display:"flex",alignItems:"center",gap:4}}>{sub}</div>}
+  </div>
+);
+const PH = ({title,sub}) => (
+  <div style={{marginBottom:28}}>
+    <h1 style={{fontFamily:G.font,fontSize:22,fontWeight:700,color:G.text}}>{title}</h1>
+    {sub&&<p style={{fontFamily:G.font,fontSize:12,color:G.muted,marginTop:4}}>{sub}</p>}
+  </div>
+);
+const Card = ({children,style}) => <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:12,...style}}>{children}</div>;
+const Tbl = ({headers,children}) => (
+  <Card>
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead><tr style={{borderBottom:`2px solid ${G.border}`,background:G.surface2}}>
+        {headers.map(h=><th key={h} style={{fontFamily:G.font,fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:G.muted,padding:"12px 20px",textAlign:"left",textTransform:"uppercase"}}>{h}</th>)}
+      </tr></thead>
+      <tbody>{children}</tbody>
+    </table>
+  </Card>
+);
+const Td = ({children,navy,muted,bold}) => <td style={{padding:"14px 20px",fontFamily:G.font,fontSize:13,color:navy?G.navy:muted?G.muted:G.text,fontWeight:bold?600:400}}>{children}</td>;
+
+// ── Segmented tab bar (connected pill strip, matches Settings tab style) ──────
+// tabs = [{id, label}] or [{id, label, count}]
+const SegTabs = ({tabs, active, setActive, style={}}) => (
+  <div style={{display:"flex",gap:0,background:G.surface2,borderRadius:10,padding:4,width:"fit-content",...style}}>
+    {tabs.map(t=>{
+      const on = active===t.id;
+      return (
+        <button key={t.id} onClick={()=>setActive(t.id)} style={{
+          display:"flex",alignItems:"center",gap:6,
+          padding:"8px 18px", fontFamily:G.font, fontSize:13, fontWeight:600,
+          cursor:"pointer", border:"none", borderRadius:7,
+          background: on ? "#fff" : "transparent",
+          color:       on ? G.navy  : G.muted,
+          boxShadow:   on ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+          transition:"all 0.15s", whiteSpace:"nowrap",
+        }}>
+          {t.icon&&<span style={{fontSize:14}}>{t.icon}</span>}
+          {t.label}
+          {t.count!=null&&<span style={{
+            fontFamily:G.font,fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:10,
+            background: on ? G.navy : G.surface3,
+            color:      on ? "#fff" : G.muted,
+          }}>{t.count}</span>}
+        </button>
+      );
+    })}
+  </div>
+);
+const Tog = ({on,onClick}) => (
+  <div onClick={onClick} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+    <div style={{width:36,height:20,borderRadius:10,background:on?G.copper:G.dim,position:"relative",transition:"background 0.2s"}}>
+      <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:on?19:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+    </div>
+    <span style={{fontFamily:G.font,fontSize:11,fontWeight:600,color:on?G.copper:G.muted}}>{on?"ON":"OFF"}</span>
+  </div>
+);
+
+// ─── MARKDOWN-LIKE RENDERER ───────────────────────────────────────────────────
+function renderMarkdown(text) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const elements = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.startsWith('## ')) {
+      elements.push(<h2 key={i}>{line.slice(3)}</h2>);
+    } else if (line.startsWith('### ')) {
+      elements.push(<h3 key={i}>{line.slice(4)}</h3>);
+    } else if (line.startsWith('> ')) {
+      elements.push(<blockquote key={i}>{line.slice(2)}</blockquote>);
+    } else if (line.startsWith('- ') || line.startsWith('✅ ') || line.startsWith('* ')) {
+      const items = [];
+      while (i < lines.length && (lines[i].startsWith('- ') || lines[i].startsWith('✅ ') || lines[i].startsWith('* '))) {
+        const raw = lines[i].replace(/^[-*✅] /, '');
+        items.push(<li key={i} dangerouslySetInnerHTML={{__html: raw.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}}/>);
+        i++;
+      }
+      elements.push(<ul key={`ul-${i}`}>{items}</ul>);
+      continue;
+    } else if (/^\d+\. /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i])) {
+        const raw = lines[i].replace(/^\d+\. /, '');
+        items.push(<li key={i} dangerouslySetInnerHTML={{__html: raw.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}}/>);
+        i++;
+      }
+      elements.push(<ol key={`ol-${i}`}>{items}</ol>);
+      continue;
+    } else if (line.trim() !== '') {
+      elements.push(<p key={i} dangerouslySetInnerHTML={{__html: line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>')}}/>);
+    }
+    i++;
+  }
+  return <div className="prose">{elements}</div>;
+}
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const Sidebar = ({navItems,activeTab,setTab,userName,userTitle,userAvatar,isAdmin,bottom}) => {
