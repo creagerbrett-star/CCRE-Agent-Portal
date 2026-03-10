@@ -2,6 +2,18 @@ import { useState, useRef, useEffect } from "react";
 
 import { G, statusColor } from "./constants/theme.js";
 import { COMMISSION_PLANS_SEED, DEFAULT_FEES_SEED } from "./constants/commissionPlans.js";
+import {
+  INITIAL_AGENTS,
+  INITIAL_TRANSACTIONS,
+  INITIAL_COURSES,
+  SEED_POSTS,
+  SEED_DMS,
+  SEED_CHANNELS,
+  SEED_VENDORS,
+  SEED_ANNOUNCEMENTS,
+  SEED_POPUPS,
+  SEED_EVENTS,
+} from "./constants/seedData.js";
 
 
 // ─── TRANSACTION ID GENERATOR ─────────────────────────────────────────────────
