@@ -34,6 +34,5 @@ export const COMMISSION_PLANS_SEED = {
 };
 
 export const DEFAULT_FEES_SEED = [
-  { id:1, name:"E&O Insurance",          amount:150 },
-  { id:2, name:"Transaction Coordinator", amount:395 },
+  { id:2, name:"Transaction Coordinator", amount:200 },
 ];
