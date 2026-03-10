@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 
-import { useState, useRef, useEffect } from "react";
 import { G, statusColor } from "./constants/theme.js";
 import { COMMISSION_PLANS_SEED, DEFAULT_FEES_SEED } from "./constants/commissionPlans.js";
 
